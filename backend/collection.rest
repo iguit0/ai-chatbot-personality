@@ -1,0 +1,51 @@
+# Define variables for reusability
+@hostname = http://localhost
+@port = 8000
+@host = {{hostname}}:{{port}}
+@contentType = application/json
+
+# ------------------------------------------------------------------
+
+# Test 1: GET /personalities - Fetch available personalities
+###
+GET {{host}}/personalities
+Content-Type: {{contentType}}
+
+# Test 2: POST /chat - Successful chat request with valid input
+###
+POST {{host}}/chat
+Content-Type: {{contentType}}
+
+{
+    "message": "Tell me about artificial intelligence",
+    "personality": "formal"
+}
+
+# Test 3: POST /chat - Invalid personality (error case)
+###
+POST {{host}}/chat
+Content-Type: {{contentType}}
+
+{
+    "message": "What is AI?",
+    "personality": "invalid"
+}
+
+# Test 4: POST /chat - Empty message (error case)
+###
+POST {{host}}/chat
+Content-Type: {{contentType}}
+
+{
+    "message": "",
+    "personality": "creative"
+}
+
+# Test 5: POST /chat - Missing fields (error case)
+###
+POST {{host}}/chat
+Content-Type: {{contentType}}
+
+{
+    "body": "Test"
+}
