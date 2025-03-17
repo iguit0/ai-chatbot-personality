@@ -156,9 +156,22 @@ export function ChatInterface() {
       <CardHeader>
         <CardTitle>Chat with AI</CardTitle>
         <CardDescription>
-          {selectedPersonality
-            ? `Chatting with ${selectedPersonality.name} personality`
-            : "Select a personality to start chatting"}
+          {selectedPersonality ? (
+            <div className="space-y-1">
+              <p>{selectedPersonality.description}</p>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span>Tone: {selectedPersonality.tone}/10</span>
+                <span>•</span>
+                <span>Verbosity: {selectedPersonality.verbosity}/10</span>
+                <span>•</span>
+                <span>Creativity: {selectedPersonality.creativity}/10</span>
+                <span>•</span>
+                <span>Formality: {selectedPersonality.formality}/10</span>
+              </div>
+            </div>
+          ) : (
+            "Select a personality to start chatting"
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">

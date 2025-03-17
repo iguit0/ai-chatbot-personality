@@ -1,26 +1,35 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { usePersonality } from "./personality-provider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
-import type { Personality } from "@/lib/types"
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { v4 as uuidv4 } from "@/lib/uuid"
+import { useState } from "react";
+import { usePersonality } from "./personality-provider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import type { Personality } from "@/lib/types";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { v4 as uuidv4 } from "@/lib/uuid";
 
 type PersonalityEditorProps = {
-  personality?: Personality
-  onClose: () => void
-  mode: "create" | "edit"
-}
+  personality?: Personality;
+  onClose: () => void;
+  mode: "create" | "edit";
+};
 
-export function PersonalityEditor({ personality, onClose, mode }: PersonalityEditorProps) {
-  const { addPersonality, updatePersonality } = usePersonality()
+export function PersonalityEditor({
+  personality,
+  onClose,
+  mode,
+}: PersonalityEditorProps) {
+  const { addPersonality, updatePersonality } = usePersonality();
 
   const [formData, setFormData] = useState<Personality>(
     personality || {
@@ -33,36 +42,43 @@ export function PersonalityEditor({ personality, onClose, mode }: PersonalityEdi
       creativity: 5, // 1-10 scale
       formality: 5, // 1-10 scale
       isDefault: false,
-    },
-  )
+      modelParams: { temperature: 0.7 },
+    }
+  );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSliderChange = (name: string, value: number[]) => {
-    setFormData((prev) => ({ ...prev, [name]: value[0] }))
-  }
+    setFormData((prev) => ({ ...prev, [name]: value[0] }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (mode === "create") {
-      addPersonality(formData)
+      addPersonality(formData);
     } else {
-      updatePersonality(formData.id, formData)
+      updatePersonality(formData.id, formData);
     }
 
-    onClose()
-  }
+    onClose();
+  };
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{mode === "create" ? "Create New Personality" : "Edit Personality"}</DialogTitle>
+        <DialogTitle>
+          {mode === "create" ? "Create New Personality" : "Edit Personality"}
+        </DialogTitle>
         <DialogDescription>
-          {mode === "create" ? "Define a new personality for your AI assistant." : "Modify this personality profile."}
+          {mode === "create"
+            ? "Define a new personality for your AI assistant."
+            : "Modify this personality profile."}
         </DialogDescription>
       </DialogHeader>
 
@@ -108,7 +124,9 @@ export function PersonalityEditor({ personality, onClose, mode }: PersonalityEdi
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="tone">Tone</Label>
-              <span className="text-sm text-muted-foreground">{formData.tone}/10</span>
+              <span className="text-sm text-muted-foreground">
+                {formData.tone}/10
+              </span>
             </div>
             <Slider
               id="tone"
@@ -127,7 +145,9 @@ export function PersonalityEditor({ personality, onClose, mode }: PersonalityEdi
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="verbosity">Verbosity</Label>
-              <span className="text-sm text-muted-foreground">{formData.verbosity}/10</span>
+              <span className="text-sm text-muted-foreground">
+                {formData.verbosity}/10
+              </span>
             </div>
             <Slider
               id="verbosity"
@@ -146,7 +166,9 @@ export function PersonalityEditor({ personality, onClose, mode }: PersonalityEdi
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="creativity">Creativity</Label>
-              <span className="text-sm text-muted-foreground">{formData.creativity}/10</span>
+              <span className="text-sm text-muted-foreground">
+                {formData.creativity}/10
+              </span>
             </div>
             <Slider
               id="creativity"
@@ -165,7 +187,9 @@ export function PersonalityEditor({ personality, onClose, mode }: PersonalityEdi
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="formality">Formality</Label>
-              <span className="text-sm text-muted-foreground">{formData.formality}/10</span>
+              <span className="text-sm text-muted-foreground">
+                {formData.formality}/10
+              </span>
             </div>
             <Slider
               id="formality"
@@ -186,10 +210,11 @@ export function PersonalityEditor({ personality, onClose, mode }: PersonalityEdi
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">{mode === "create" ? "Create Personality" : "Save Changes"}</Button>
+          <Button type="submit">
+            {mode === "create" ? "Create Personality" : "Save Changes"}
+          </Button>
         </DialogFooter>
       </form>
     </>
-  )
+  );
 }
-
