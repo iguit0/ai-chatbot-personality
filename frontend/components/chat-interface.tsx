@@ -18,20 +18,86 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Send, RefreshCw, User, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 
 // Define message type
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  created_at?: string;
 }
 
-export function ChatInterface() {
+interface Conversation {
+  id: string;
+  personality: string;
+  created_at: string;
+  messages: Message[];
+}
+
+interface ChatInterfaceProps {
+  conversationId: string | null;
+  onConversationUpdate: () => void;
+}
+
+export function ChatInterface({
+  conversationId,
+  onConversationUpdate,
+}: ChatInterfaceProps) {
+  const router = useRouter();
   const { selectedPersonality } = usePersonality();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Load conversations on mount
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/conversations`
+      );
+      if (!response.ok) throw new Error("Failed to load conversations");
+      const data = await response.json();
+      setConversations(data.conversations);
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+      setConversations([]);
+    }
+  };
+
+  // Load messages when conversation ID changes
+  useEffect(() => {
+    if (conversationId) {
+      loadMessages(conversationId);
+    } else {
+      setMessages([]);
+    }
+  }, [conversationId]);
+
+  const loadMessages = async (id: string) => {
+    try {
+      const response = await fetch(`/api/chat?id=${id}`);
+      if (!response.ok) throw new Error("Failed to load messages");
+      const data = await response.json();
+      setMessages(data.messages);
+    } catch (error) {
+      console.error("Error loading messages:", error);
+    }
+  };
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -69,6 +135,7 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: userMessage.content,
           personality: selectedPersonality.id.toLowerCase(),
+          conversation_id: conversationId,
         }),
       });
 
@@ -85,6 +152,7 @@ export function ChatInterface() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      onConversationUpdate();
     } catch (error) {
       console.error("Error getting response:", error);
       const errorMessage: Message = {
@@ -120,6 +188,7 @@ export function ChatInterface() {
         body: JSON.stringify({
           message: lastUserMessage.content,
           personality: selectedPersonality.id.toLowerCase(),
+          conversation_id: conversationId,
         }),
       });
 
@@ -136,6 +205,7 @@ export function ChatInterface() {
       };
 
       setMessages([...newMessages, assistantMessage]);
+      onConversationUpdate();
     } catch (error) {
       console.error("Error getting response:", error);
       const errorMessage: Message = {
@@ -151,14 +221,69 @@ export function ChatInterface() {
     }
   };
 
+  const handleNewChat = () => {
+    router.push("/");
+  };
+
+  const handleConversationSelect = (conv: Conversation) => {
+    router.push(`/conversation/${conv.id}`);
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Chat with AI</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Chat with AI</CardTitle>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleNewChat}>
+              New Chat
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  History
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Chat History</DialogTitle>
+                  <DialogDescription>
+                    Select a conversation to continue
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-2">
+                    {conversations.map((conv) => (
+                      <Button
+                        key={conv.id}
+                        variant={
+                          conv.id === conversationId ? "secondary" : "ghost"
+                        }
+                        className="w-full justify-start"
+                        onClick={() => handleConversationSelect(conv)}
+                      >
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">
+                            {conv.personality}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(conv.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
         <CardDescription>
           {selectedPersonality ? (
             <div className="space-y-1">
-              <p>{selectedPersonality.description}</p>
+              <p>
+                {selectedPersonality.name} • {selectedPersonality.description}
+              </p>
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span>Tone: {selectedPersonality.tone}/10</span>
                 <span>•</span>
@@ -175,7 +300,7 @@ export function ChatInterface() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
-        <ScrollArea className="h-[500px] pr-4" ref={scrollAreaRef}>
+        <ScrollArea className="h-[calc(100vh-16rem)] pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-[400px] text-center">
