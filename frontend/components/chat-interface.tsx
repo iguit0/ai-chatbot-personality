@@ -1,154 +1,155 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { usePersonality } from "./personality-provider"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Send, RefreshCw, User, Bot } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useRef, useEffect } from "react";
+import { usePersonality } from "./personality-provider";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Send, RefreshCw, User, Bot } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Define message type
 interface Message {
-  id: string
-  role: "user" | "assistant"
-  content: string
+  id: string;
+  role: "user" | "assistant";
+  content: string;
 }
 
 export function ChatInterface() {
-  const { selectedPersonality } = usePersonality()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const { selectedPersonality } = usePersonality();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current
-      scrollContainer.scrollTop = scrollContainer.scrollHeight
+      const scrollContainer = scrollAreaRef.current;
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
-  }, [messages])
+  }, [messages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value)
-  }
+    setInput(e.target.value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!selectedPersonality || !input.trim() || isLoading) return
+    if (!selectedPersonality || !input.trim() || isLoading) return;
 
-    // Create a new user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: input.trim(),
-    }
+    };
 
-    // Add user message to chat
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
 
     try {
-      // Call your custom backend API here
-      const response = await fetch("/api/your-custom-endpoint", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
-          personality: selectedPersonality,
+          message: userMessage.content,
+          personality: selectedPersonality.id.toLowerCase(),
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to get response")
+        throw new Error("Failed to get response");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
-      // Add assistant message to chat
       const assistantMessage: Message = {
         id: Date.now().toString(),
         role: "assistant",
         content: data.response,
-      }
+      };
 
-      setMessages((prev) => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error("Error getting response:", error)
-      // Add error message
+      console.error("Error getting response:", error);
       const errorMessage: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: "I'm sorry, I couldn't process your request. Please try again.",
-      }
+        content:
+          "I'm sorry, I couldn't process your request. Please try again.",
+      };
 
-      setMessages((prev) => [...prev, errorMessage])
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const regenerateResponse = async () => {
-    if (!selectedPersonality || isLoading || messages.length < 1) return
+    if (!selectedPersonality || isLoading || messages.length < 1) return;
 
-    // Remove the last assistant message if it exists
-    let newMessages = [...messages]
+    let newMessages = [...messages];
     if (newMessages[newMessages.length - 1].role === "assistant") {
-      newMessages = newMessages.slice(0, -1)
+      newMessages = newMessages.slice(0, -1);
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
-      // Call your custom backend API here
-      const response = await fetch("/api/your-custom-endpoint", {
+      const lastUserMessage = newMessages[newMessages.length - 1];
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: newMessages,
-          personality: selectedPersonality,
+          message: lastUserMessage.content,
+          personality: selectedPersonality.id.toLowerCase(),
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to get response")
+        throw new Error("Failed to get response");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
-      // Add assistant message to chat
       const assistantMessage: Message = {
         id: Date.now().toString(),
         role: "assistant",
         content: data.response,
-      }
+      };
 
-      setMessages([...newMessages, assistantMessage])
+      setMessages([...newMessages, assistantMessage]);
     } catch (error) {
-      console.error("Error getting response:", error)
-      // Add error message
+      console.error("Error getting response:", error);
       const errorMessage: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: "I'm sorry, I couldn't process your request. Please try again.",
-      }
+        content:
+          "I'm sorry, I couldn't process your request. Please try again.",
+      };
 
-      setMessages([...newMessages, errorMessage])
+      setMessages([...newMessages, errorMessage]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Card className="h-full flex flex-col">
@@ -179,7 +180,7 @@ export function ChatInterface() {
                   key={message.id}
                   className={cn(
                     "flex items-start gap-3 rounded-lg p-3",
-                    message.role === "user" ? "bg-muted/50" : "bg-background",
+                    message.role === "user" ? "bg-muted/50" : "bg-background"
                   )}
                 >
                   <Avatar className="h-8 w-8">
@@ -216,22 +217,39 @@ export function ChatInterface() {
         </ScrollArea>
       </CardContent>
       <CardFooter className="border-t pt-4">
-        <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
+        <form
+          onSubmit={handleSubmit}
+          className="flex w-full items-center space-x-2"
+        >
           <Input
             id="message"
-            placeholder={selectedPersonality ? "Type your message..." : "Select a personality first..."}
+            placeholder={
+              selectedPersonality
+                ? "Type your message..."
+                : "Select a personality first..."
+            }
             className="flex-1"
             autoComplete="off"
             value={input}
             onChange={handleInputChange}
             disabled={!selectedPersonality || isLoading}
           />
-          <Button type="submit" size="icon" disabled={!selectedPersonality || isLoading || !input.trim()}>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!selectedPersonality || isLoading || !input.trim()}
+          >
             <Send className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>
           {messages.length > 0 && (
-            <Button type="button" variant="outline" size="icon" onClick={regenerateResponse} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={regenerateResponse}
+              disabled={isLoading}
+            >
               <RefreshCw className="h-4 w-4" />
               <span className="sr-only">Regenerate</span>
             </Button>
@@ -239,6 +257,5 @@ export function ChatInterface() {
         </form>
       </CardFooter>
     </Card>
-  )
+  );
 }
-

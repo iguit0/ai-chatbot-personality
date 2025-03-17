@@ -1,72 +1,59 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import type { Personality } from "@/lib/types"
-import { defaultPersonalities } from "@/lib/default-personalities"
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
+import type { Personality } from "@/lib/types";
 
 type PersonalityContextType = {
-  personalities: Personality[]
-  selectedPersonality: Personality | null
-  setSelectedPersonality: (personality: Personality) => void
-  addPersonality: (personality: Personality) => void
-  updatePersonality: (id: string, personality: Partial<Personality>) => void
-  deletePersonality: (id: string) => void
-}
+  personalities: Personality[];
+  selectedPersonality: Personality | null;
+  setSelectedPersonality: (personality: Personality) => void;
+};
 
-const PersonalityContext = createContext<PersonalityContextType | undefined>(undefined)
+const PersonalityContext = createContext<PersonalityContextType | undefined>(
+  undefined
+);
 
 export function PersonalityProvider({ children }: { children: ReactNode }) {
-  const [personalities, setPersonalities] = useState<Personality[]>([])
-  const [selectedPersonality, setSelectedPersonality] = useState<Personality | null>(null)
+  const [personalities, setPersonalities] = useState<Personality[]>([]);
+  const [selectedPersonality, setSelectedPersonality] =
+    useState<Personality | null>(null);
 
   useEffect(() => {
-    // Load personalities from localStorage or use defaults
-    const storedPersonalities = localStorage.getItem("personalities")
-    const initialPersonalities = storedPersonalities ? JSON.parse(storedPersonalities) : defaultPersonalities
+    const fetchPersonalities = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/personalities`
+        );
+        if (!response.ok) throw new Error("Failed to fetch personalities");
+        const data = await response.json();
 
-    setPersonalities(initialPersonalities)
+        const formattedPersonalities: Personality[] = data.personalities.map(
+          (name: string) => ({
+            id: name,
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            description: `${
+              name.charAt(0).toUpperCase() + name.slice(1)
+            } personality`,
+          })
+        );
 
-    // Set default selected personality
-    if (initialPersonalities.length > 0) {
-      setSelectedPersonality(initialPersonalities[0])
-    }
-  }, [])
-
-  useEffect(() => {
-    // Save personalities to localStorage whenever they change
-    if (personalities.length > 0) {
-      localStorage.setItem("personalities", JSON.stringify(personalities))
-    }
-  }, [personalities])
-
-  const addPersonality = (personality: Personality) => {
-    setPersonalities((prev) => [...prev, personality])
-  }
-
-  const updatePersonality = (id: string, updatedFields: Partial<Personality>) => {
-    setPersonalities((prev) => prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p)))
-
-    // Update selected personality if it's the one being edited
-    if (selectedPersonality?.id === id) {
-      setSelectedPersonality((prev) => (prev ? { ...prev, ...updatedFields } : null))
-    }
-  }
-
-  const deletePersonality = (id: string) => {
-    setPersonalities((prev) => prev.filter((p) => p.id !== id))
-
-    // If the deleted personality was selected, select the first available one
-    if (selectedPersonality?.id === id) {
-      setPersonalities((prev) => {
-        if (prev.length > 0 && prev[0].id !== id) {
-          setSelectedPersonality(prev.find((p) => p.id !== id) || null)
-        } else {
-          setSelectedPersonality(null)
+        setPersonalities(formattedPersonalities);
+        if (formattedPersonalities.length > 0) {
+          setSelectedPersonality(formattedPersonalities[0]);
         }
-        return prev
-      })
-    }
-  }
+      } catch (error) {
+        console.error("Error fetching personalities:", error);
+      }
+    };
+
+    fetchPersonalities();
+  }, []);
 
   return (
     <PersonalityContext.Provider
@@ -74,21 +61,17 @@ export function PersonalityProvider({ children }: { children: ReactNode }) {
         personalities,
         selectedPersonality,
         setSelectedPersonality,
-        addPersonality,
-        updatePersonality,
-        deletePersonality,
       }}
     >
       {children}
     </PersonalityContext.Provider>
-  )
+  );
 }
 
 export function usePersonality() {
-  const context = useContext(PersonalityContext)
+  const context = useContext(PersonalityContext);
   if (context === undefined) {
-    throw new Error("usePersonality must be used within a PersonalityProvider")
+    throw new Error("usePersonality must be used within a PersonalityProvider");
   }
-  return context
+  return context;
 }
-

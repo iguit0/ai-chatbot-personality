@@ -11,14 +11,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Forward request to FastAPI backend
-    const backendResponse = await fetch("http://localhost:8000/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message, personality }),
-    });
+    const backendResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/chat`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message, personality }),
+      }
+    );
 
     if (!backendResponse.ok) {
       const errorData = await backendResponse.json();
