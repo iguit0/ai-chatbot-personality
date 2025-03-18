@@ -5,7 +5,6 @@
 
 ## ✨ Features
 ### Backend
-- Health routes
 - Chatbot routes
 - Schemas
 
