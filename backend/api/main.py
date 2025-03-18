@@ -5,11 +5,9 @@ from cohere import ClientV2
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from sqlalchemy import (
-    create_engine,
-)
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+from models.base import Base
 from models.conversation import Conversation
 from models.message import Message
 from models.personality import Personality
@@ -17,6 +15,7 @@ from schemas.personality import PersonalityResponse
 from schemas.chat import ChatRequest, ChatResponse
 from schemas.conversation import ConversationResponse, ConversationListResponse
 from schemas.message import MessageResponse
+from evaluation.evaluator import Evaluator
 
 
 load_dotenv()
@@ -27,9 +26,8 @@ engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
 
-
+# Create all tables
 Base.metadata.create_all(bind=engine)
 
 
@@ -259,3 +257,94 @@ async def list_conversations(
     return ConversationListResponse(
         conversations=result, total=total, page=page, page_size=page_size
     )
+
+
+@app.post("/evaluate/{personality_id}")
+async def evaluate_personality(personality_id: str):
+    """Evaluate a personality against the m-ArenaHard dataset"""
+    if personality_id not in personalities:
+        raise HTTPException(status_code=400, detail="Invalid personality selected")
+
+    evaluator = Evaluator(personality_id)
+    results = evaluator.evaluate(co)
+    summary = evaluator.get_evaluation_summary()
+
+    return {"results": results, "summary": summary}
+
+
+@app.get("/prompts/chatbot-development")
+async def get_chatbot_prompts():
+    """Get 25 random prompts from the Chatbot Development & Integration cluster"""
+    evaluator = Evaluator("")  # Empty personality_id since we're just getting prompts
+    prompts = evaluator.get_filtered_prompts("Chatbot Development & Integration")
+
+    return {
+        "prompts": [
+            {
+                "id": item["question_id"],
+                "prompt": item["prompt"],
+                "category": item["category"],
+            }
+            for item in prompts
+        ]
+    }
+
+
+@app.post("/chat/random-prompt/{personality_id}")
+async def chat_with_random_prompt(personality_id: str, db: Session = Depends(get_db)):
+    """Create a new conversation with a random prompt from the Chatbot Development & Integration cluster"""
+    if personality_id not in personalities:
+        raise HTTPException(status_code=400, detail="Invalid personality selected")
+
+    evaluator = Evaluator(personality_id)
+    prompts = evaluator.get_filtered_prompts(
+        "Chatbot Development & Integration", limit=1
+    )
+
+    if not prompts:
+        raise HTTPException(
+            status_code=404, detail="No prompts found in the specified cluster"
+        )
+
+    prompt = prompts[0]
+
+    # Create new conversation
+    conversation_id = str(uuid.uuid4())
+    db_conversation = Conversation(id=conversation_id, personality=personality_id)
+    db.add(db_conversation)
+    db.commit()
+
+    # Store the prompt as a user message
+    user_message = Message(
+        id=str(uuid.uuid4()),
+        conversation_id=conversation_id,
+        role="user",
+        content=prompt["prompt"],
+    )
+    db.add(user_message)
+    db.commit()
+
+    # Get response from Cohere
+    personality = personalities[personality_id]
+    response = co.chat(
+        model=cohere_model,
+        messages=[
+            {"role": "system", "content": personality.system_prompt},
+            {"role": "user", "content": prompt["prompt"]},
+        ],
+        temperature=personality.model_params["temperature"],
+    )
+
+    generated_text = response.message.content[0].text.strip()
+
+    # Store assistant response
+    assistant_message = Message(
+        id=str(uuid.uuid4()),
+        conversation_id=conversation_id,
+        role="assistant",
+        content=generated_text,
+    )
+    db.add(assistant_message)
+    db.commit()
+
+    return ChatResponse(response=generated_text, conversation_id=conversation_id)
