@@ -27,6 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+import { ChatbotDevButton } from "./chatbot-dev-button";
 
 // Define message type
 interface Message {
@@ -232,9 +233,17 @@ export function ChatInterface({
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>Chat with AI</CardTitle>
-          <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <CardTitle>Chat</CardTitle>
+          <div className="flex flex-col md:flex-row gap-2">
+            {selectedPersonality && (
+              <ChatbotDevButton
+                personalityId={selectedPersonality.id}
+                onNewConversation={(id: string) =>
+                  router.push(`/conversation/${id}`)
+                }
+              />
+            )}
             <Button variant="outline" size="sm" onClick={handleNewChat}>
               New Chat
             </Button>
@@ -300,7 +309,7 @@ export function ChatInterface({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
-        <ScrollArea className="h-[calc(100vh-16rem)] pr-4" ref={scrollAreaRef}>
+        <ScrollArea className="h-[calc(100vh-24rem)] pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-[400px] text-center">
